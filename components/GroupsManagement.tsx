@@ -1,14 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Users, Wallet, ExternalLink, Edit2, MessageSquare, Share2, X, Loader2, Check, DollarSign } from 'lucide-react';
-import { PoolGroup } from '../types';
+import { PoolGroup, User } from '../types';
 import { db } from '../services/db';
 
 interface GroupsManagementProps {
   isAdmin?: boolean;
+  currentUser: User;
 }
 
-const GroupsManagement: React.FC<GroupsManagementProps> = ({ isAdmin = false }) => {
+const GroupsManagement: React.FC<GroupsManagementProps> = ({ isAdmin = false, currentUser }) => {
   const [groups, setGroups] = useState<PoolGroup[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,8 +26,26 @@ const GroupsManagement: React.FC<GroupsManagementProps> = ({ isAdmin = false }) 
   const loadGroups = async () => {
     try {
       setIsLoading(true);
-      const list = await db.groups.getList();
-      setGroups(list);
+      const [list, participants] = await Promise.all([
+          db.groups.getList(),
+          db.participants.getList()
+      ]);
+      
+      let filtered = list;
+      if (currentUser.role === 'POOL_MEMBER') {
+          const myParticipant = participants.find(p => p.profileId === currentUser.id);
+          if (myParticipant) {
+              filtered = list.filter(g => 
+                  g.participants?.some((p: any) => p.participantId === myParticipant.id)
+              );
+          } else {
+              filtered = [];
+          }
+      } else if (currentUser.role === 'POOL_ADMIN') {
+          filtered = list.filter(g => g.ownerId === currentUser.id);
+      }
+
+      setGroups(filtered);
     } catch (e) {
       console.error(e);
     } finally {

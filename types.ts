@@ -12,7 +12,7 @@ export interface AppNotification {
   read: boolean;
 }
 
-export type UserRole = 'ADMIN' | 'PARTICIPANT';
+export type UserRole = 'SAAS_ADMIN' | 'POOL_ADMIN' | 'POOL_MEMBER';
 
 export interface User {
   id: string;

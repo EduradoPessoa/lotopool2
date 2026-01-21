@@ -20,15 +20,21 @@ const MyPools: React.FC<MyPoolsProps> = ({ user }) => {
     const fetchMyPools = async () => {
       try {
         setLoading(true);
-        const [allPools, groups] = await Promise.all([
+        const [allPools, participants] = await Promise.all([
             db.pools.getList(),
-            db.groups.getList()
+            db.participants.getList()
         ]);
         
-        const myPools = allPools.filter(pool => 
-          pool.participants.some(p => p.participantId === user.id)
-        );
-        setPools(myPools);
+        const myParticipant = participants.find(p => p.profileId === user.id);
+
+        if (myParticipant) {
+          const myPools = allPools.filter(pool => 
+            pool.participants.some(p => p.participantId === myParticipant.id)
+          );
+          setPools(myPools);
+        } else {
+          setPools([]);
+        }
       } catch (e) {
         console.error("Erro ao carregar minhas cotas:", e);
       } finally {

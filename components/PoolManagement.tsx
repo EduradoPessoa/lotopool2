@@ -46,7 +46,25 @@ const PoolManagement: React.FC<PoolManagementProps> = ({ isAdmin = false, curren
         db.participants.getList(),
         db.groups.getList()
       ]);
-      setPools(poolList);
+      
+      let filteredPools = poolList;
+      if (currentUser.role === 'POOL_MEMBER') {
+        const myParticipant = participantList.find(p => p.profileId === currentUser.id);
+        if (myParticipant) {
+          filteredPools = poolList.filter(pool => 
+            pool.participants?.some((p: any) => p.participantId === myParticipant.id)
+          );
+        } else {
+          filteredPools = [];
+        }
+      } else if (currentUser.role === 'POOL_ADMIN') {
+        const myGroupIds = groups
+          .filter(g => g.ownerId === currentUser.id)
+          .map(g => g.id);
+        filteredPools = poolList.filter(pool => myGroupIds.includes(pool.groupId));
+      }
+
+      setPools(filteredPools);
       setAvailableParticipants(participantList);
       if (groups.length > 0 && !newPool.groupId) {
         setNewPool(prev => ({ ...prev, groupId: groups[0].id }));

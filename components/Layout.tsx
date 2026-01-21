@@ -57,14 +57,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, user
   }, [activeTab]);
 
   const navItems = [
-    { id: 'dashboard', label: 'Início', icon: LayoutDashboard },
-    { id: 'my-pools', label: 'Minhas Cotas', icon: UserCheck },
-    { id: 'groups', label: 'Grupos', icon: Layers },
-    { id: 'pools', label: 'Bolões', icon: Trophy },
-    { id: 'participants', label: 'Membros', icon: Users },
-    { id: 'tickets', label: 'Comprovantes', icon: Ticket },
-    { id: 'financial', label: 'Financeiro', icon: Wallet, adminOnly: true },
-  ].filter(item => !item.adminOnly || user.role === 'ADMIN');
+    { id: 'dashboard', label: 'Início', icon: LayoutDashboard, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN', 'POOL_MEMBER'] },
+    { id: 'my-pools', label: 'Minhas Cotas', icon: UserCheck, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN', 'POOL_MEMBER'] },
+    { id: 'groups', label: 'Grupos', icon: Layers, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN', 'POOL_MEMBER'] },
+    { id: 'pools', label: 'Bolões', icon: Trophy, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN', 'POOL_MEMBER'] },
+    { id: 'participants', label: 'Membros', icon: Users, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN'] },
+    { id: 'tickets', label: 'Comprovantes', icon: Ticket, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN', 'POOL_MEMBER'] },
+    { id: 'financial', label: 'Financeiro', icon: Wallet, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN'] },
+  ].filter(item => item.allowedRoles.includes(user.role));
 
   const handleMarkAsRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
