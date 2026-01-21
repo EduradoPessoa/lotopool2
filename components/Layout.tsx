@@ -63,7 +63,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, user
     { id: 'pools', label: 'Bolões', icon: Trophy, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN', 'POOL_MEMBER'] },
     { id: 'participants', label: 'Membros', icon: Users, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN'] },
     { id: 'tickets', label: 'Comprovantes', icon: Ticket, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN', 'POOL_MEMBER'] },
-    { id: 'financial', label: 'Financeiro', icon: Wallet, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN'] },
+    { id: 'financial', label: 'Financeiro', icon: Wallet, allowedRoles: ['SAAS_ADMIN', 'POOL_ADMIN', 'POOL_MEMBER'] },
   ].filter(item => item.allowedRoles.includes(user.role));
 
   const handleMarkAsRead = (id: string) => {
@@ -184,7 +184,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, user
                 {navItems.find(i => i.id === activeTab)?.label}
               </h1>
               <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest leading-tight">
-                {user.role === 'ADMIN' ? 'Modo Administrativo' : 'Área do Participante'}
+                {user.role === 'SAAS_ADMIN' || user.role === 'POOL_ADMIN' ? 'Modo Administrativo' : 'Área do Participante'}
               </p>
             </div>
           </div>

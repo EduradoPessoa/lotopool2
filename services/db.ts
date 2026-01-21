@@ -28,12 +28,31 @@ export const db = {
 
   auth: {
     login: async (email, password) => {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
-      return data;
+      console.log("db.auth.login chamado para:", email);
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout de conexão com Supabase (Login)')), 10000)
+      );
+
+      try {
+        const { data, error } = await Promise.race([
+            supabase.auth.signInWithPassword({
+                email,
+                password,
+            }),
+            timeoutPromise
+        ]) as any;
+
+        if (error) {
+            console.error("Erro retornado pelo Supabase Login:", error);
+            throw error;
+        }
+        console.log("Supabase Login retornou sucesso.");
+        return data;
+      } catch (e) {
+          console.error("Exceção no db.auth.login:", e);
+          throw e;
+      }
     },
     signUp: async (email, password, metadata = {}) => {
         const { data, error } = await supabase.auth.signUp({
@@ -51,13 +70,46 @@ export const db = {
         if (error) throw error;
     },
     getProfile: async (userId: string) => {
-        const { data, error } = await supabase
+        try {
+            // Timeout de 5 segundos para evitar travamento
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout getting profile')), 5000)
+            );
+
+            const { data, error } = await Promise.race([
+                supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', userId)
+                    .single(),
+                timeoutPromise
+            ]) as any;
+
+            if (error) return null;
+            return data;
+        } catch (e) {
+            console.warn("Erro ou Timeout ao buscar perfil:", e);
+            return null;
+        }
+    },
+    checkCpf: async (cpf: string) => {
+        // Check profiles
+        const { data: profile } = await supabase
             .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
-        if (error) return null;
-        return data;
+            .select('id')
+            .eq('cpf', cpf)
+            .maybeSingle();
+        
+        if (profile) return true;
+
+        // Check participants
+        const { data: participant } = await supabase
+            .from('participants')
+            .select('id')
+            .eq('cpf', cpf)
+            .maybeSingle();
+            
+        return !!participant;
     }
   },
 
@@ -185,6 +237,23 @@ export const db = {
         participants.push({ participantId, luckyNumber });
       }
       return await this.update(groupId, { participants });
+    },
+    async joinViaInvite(groupId: string, formData: any) {
+        const { data, error } = await supabase.rpc('join_pool_group', {
+            p_group_id: groupId,
+            p_name: formData.name,
+            p_email: formData.email,
+            p_phone: formData.phone,
+            p_cpf: formData.cpf,
+            p_pix_key: formData.pixKey,
+            p_lucky_number: parseInt(formData.luckyNumber)
+        });
+        
+        if (error) {
+            console.error("Erro no RPC join_pool_group:", error);
+            throw error;
+        }
+        return data;
     }
   },
 
@@ -205,6 +274,18 @@ export const db = {
         return [...data, ...uniqueLocal];
       } catch (e) { return localParticipants; }
     },
-    // Add create/update methods as needed
+    async create(data: Partial<Participant>): Promise<Participant> {
+        try {
+            const { data: created, error } = await supabase
+                .from('participants')
+                .insert(data)
+                .select()
+                .single();
+            if (error) throw error;
+            return created;
+        } catch (e) {
+            return saveLocal(PARTICIPANTS_KEY, { ...data, id: `participant_${Date.now()}` });
+        }
+    }
   }
 };

@@ -105,8 +105,15 @@ const App: React.FC = () => {
     setActiveTab('dashboard');
   };
 
-  if (inviteGroupId && !currentUser) {
-    return <JoinInvite groupId={inviteGroupId} onSuccess={handleJoinSuccess} />;
+  if (inviteGroupId) {
+    return (
+      <JoinInvite 
+        groupId={inviteGroupId} 
+        onSuccess={handleJoinSuccess} 
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
+    );
   }
 
   if (!currentUser) {
@@ -117,7 +124,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <Dashboard />;
+      case 'dashboard': return <Dashboard user={currentUser} />;
       case 'my-pools': return <MyPools user={currentUser} />;
       case 'groups': return <GroupsManagement isAdmin={isAdmin} currentUser={currentUser} />;
       case 'pools': return <PoolManagement isAdmin={isAdmin} currentUser={currentUser} />;
@@ -139,7 +146,7 @@ const App: React.FC = () => {
              )}
           </div>
         );
-      case 'financial': return <FinancialDashboard />;
+      case 'financial': return <FinancialDashboard user={currentUser} />;
       default: return <Dashboard />;
     }
   };
@@ -147,7 +154,7 @@ const App: React.FC = () => {
   return (
     <Layout 
       activeTab={activeTab} 
-      onTabChange={setActiveTab} 
+      setActiveTab={setActiveTab} 
       user={currentUser}
       onLogout={handleLogout}
     >

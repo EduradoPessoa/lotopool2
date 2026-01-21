@@ -56,12 +56,20 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     }
 
     try {
+      console.log("Iniciando processo de autenticação...");
       let authData;
       
       if (isLogin) {
+        console.log("Tentando login com:", email);
         authData = await db.auth.login(email, password);
+        console.log("Login bem-sucedido. Dados:", authData);
       } else {
-        authData = await db.auth.signUp(email, password);
+        console.log("Tentando cadastro com:", email);
+        authData = await db.auth.signUp(email, password, {
+          name: email.split('@')[0],
+          role: 'POOL_MEMBER'
+        });
+        console.log("Cadastro bem-sucedido. Dados:", authData);
         // Supabase pode requerer confirmação de email
         if (authData.user && !authData.session) {
           setError("Cadastro realizado! Verifique seu email para confirmar.");
@@ -71,10 +79,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       }
 
       if (authData.user) {
+        console.log("Usuário autenticado:", authData.user.id);
         // Buscar perfil completo do usuário
         let role: UserRole = 'POOL_MEMBER';
         try {
+            console.log("Buscando perfil do usuário...");
             const profile = await db.auth.getProfile(authData.user.id);
+            console.log("Perfil retornado:", profile);
             if (profile && profile.role) {
                 role = profile.role as UserRole;
             }
@@ -83,15 +94,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             // Mantém POOL_MEMBER como fallback
         }
         
+        console.log("Chamando onLogin com role:", role);
         onLogin({
           id: authData.user.id,
           name: authData.user.user_metadata?.name || email.split('@')[0],
           email: authData.user.email!,
           role: role
         });
+      } else {
+          console.warn("Usuário não retornado após login/signup");
       }
     } catch (e: any) {
-      console.warn("Erro Supabase:", e);
+      console.error("Erro CRÍTICO no Auth:", e);
       setError(e.message || "Falha na autenticação. Verifique suas credenciais.");
     } finally {
       setLoading(false);
@@ -200,6 +214,23 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               />
             </div>
           </div>
+
+          {!isLogin && (
+            <div className="space-y-2 animate-in slide-in-from-top-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">CPF</label>
+              <div className="relative group">
+                <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={20} />
+                <input 
+                  type="text" 
+                  value={cpf}
+                  onChange={(e) => setCpf(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 text-slate-900 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-400 font-medium" 
+                  placeholder="000.000.000-00"
+                  required
+                />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Senha</label>

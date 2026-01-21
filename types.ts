@@ -32,6 +32,7 @@ export interface Participant {
   cpf: string;
   pixKey: string;
   luckyNumber?: number;
+  profileId?: string;
 }
 
 export interface PoolGroup {
@@ -44,6 +45,7 @@ export interface PoolGroup {
     participantId: string;
     luckyNumber?: number;
   }[];
+  ownerId?: string;
 }
 
 export interface Ticket {

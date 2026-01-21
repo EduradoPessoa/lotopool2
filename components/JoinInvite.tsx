@@ -7,9 +7,11 @@ import { PoolGroup, User as UserType, LOTTERY_CONFIGS } from '../types';
 interface JoinInviteProps {
   groupId: string;
   onSuccess: (user: UserType) => void;
+  currentUser?: UserType | null;
+  onLogout?: () => void;
 }
 
-const JoinInvite: React.FC<JoinInviteProps> = ({ groupId, onSuccess }) => {
+const JoinInvite: React.FC<JoinInviteProps> = ({ groupId, onSuccess, currentUser, onLogout }) => {
   const STORAGE_KEY = `lottopool_invite_progress_${groupId}`;
 
   const [group, setGroup] = useState<PoolGroup | null>(null);
@@ -56,6 +58,19 @@ const JoinInvite: React.FC<JoinInviteProps> = ({ groupId, onSuccess }) => {
   }, [step, formData, groupId]);
 
   useEffect(() => {
+    if (currentUser) {
+      setFormData(prev => ({
+        ...prev,
+        name: currentUser.name || prev.name,
+        email: currentUser.email || prev.email,
+        cpf: currentUser.cpf || prev.cpf,
+        pixKey: currentUser.pixKey || prev.pixKey,
+        phone: currentUser.whatsapp || prev.phone
+      }));
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     const fetchGroup = async () => {
       const data = await db.groups.getOne(groupId);
       setGroup(data);
@@ -64,18 +79,28 @@ const JoinInvite: React.FC<JoinInviteProps> = ({ groupId, onSuccess }) => {
     fetchGroup();
   }, [groupId]);
 
-  const validateStep = () => {
+  const validateStep = async () => {
     setError(null);
     if (step === 1) {
       if (!formData.name || !formData.phone || !formData.email || !formData.cpf) {
         setError("Todos os campos de identificação são obrigatórios.");
         return false;
       }
-      // Simulação de validação de CPF único
-      const existing = localStorage.getItem(`cpf_${formData.cpf}`);
-      if (existing) {
-        setError("Este CPF já possui cadastro no sistema.");
-        return false;
+      
+      // Validação de CPF único no banco de dados
+      // Se estiver logado (currentUser), não precisa validar se é o mesmo CPF
+      if (currentUser && currentUser.cpf === formData.cpf) {
+          return true;
+      }
+
+      try {
+        const exists = await db.auth.checkCpf(formData.cpf);
+        if (exists) {
+            setError("Este CPF já está cadastrado no sistema.");
+            return false;
+        }
+      } catch (e) {
+          console.error("Erro ao validar CPF:", e);
       }
     }
     if (step === 2 && !formData.pixKey) {
@@ -89,8 +114,9 @@ const JoinInvite: React.FC<JoinInviteProps> = ({ groupId, onSuccess }) => {
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep()) setStep(s => s + 1);
+  const handleNext = async () => {
+    const isValid = await validateStep();
+    if (isValid) setStep(s => s + 1);
   };
 
   const handleJoin = async (e: React.FormEvent) => {
@@ -105,6 +131,10 @@ const JoinInvite: React.FC<JoinInviteProps> = ({ groupId, onSuccess }) => {
       // Salva CPF para simular unicidade no mock
       localStorage.setItem(`cpf_${formData.cpf}`, 'true');
 
+      // Uses RPC to create participant and link to group in one transaction
+      const userSession = await db.groups.joinViaInvite(groupId, formData);
+      
+      /* Legacy logic replaced by RPC
       const newParticipant = await db.participants.create(formData);
       await db.groups.addParticipant(groupId, newParticipant.id, formData.luckyNumber);
       
@@ -116,12 +146,14 @@ const JoinInvite: React.FC<JoinInviteProps> = ({ groupId, onSuccess }) => {
         cpf: formData.cpf,
         pixKey: formData.pixKey
       };
+      */
 
       // Clear persistence on success
       localStorage.removeItem(STORAGE_KEY);
       onSuccess(userSession);
-    } catch (e) {
-      setError("Erro ao processar sua adesão.");
+    } catch (e: any) {
+      console.error("Erro ao aderir:", e);
+      setError(e.message || "Erro ao processar sua adesão.");
     } finally {
       setIsJoining(false);
     }
@@ -239,18 +271,20 @@ const JoinInvite: React.FC<JoinInviteProps> = ({ groupId, onSuccess }) => {
           {step > 1 && (
             <button onClick={() => setStep(s => s - 1)} className="flex-1 py-4 bg-slate-50 text-slate-400 rounded-2xl font-bold hover:bg-slate-100 transition-all">Voltar</button>
           )}
-          <button 
-            onClick={step < 4 ? handleNext : handleJoin}
-            disabled={isJoining}
-            className="flex-[2] bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center space-x-3 hover:bg-emerald-600 active:scale-95 transition-all shadow-xl shadow-slate-900/10"
-          >
-            {isJoining ? <Loader2 className="animate-spin" /> : (
-              <>
-                <span className="text-lg">{step === 4 ? 'Concluir Cadastro' : 'Próximo Passo'}</span>
-                <ArrowRight size={20} />
-              </>
-            )}
-          </button>
+          {step > 0 && (
+            <button 
+                onClick={step < 4 ? handleNext : handleJoin}
+                disabled={isJoining}
+                className="flex-[2] bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center space-x-3 hover:bg-emerald-600 active:scale-95 transition-all shadow-xl shadow-slate-900/10"
+            >
+                {isJoining ? <Loader2 className="animate-spin" /> : (
+                <>
+                    <span className="text-lg">{step === 4 ? 'Concluir Cadastro' : 'Próximo Passo'}</span>
+                    <ArrowRight size={20} />
+                </>
+                )}
+            </button>
+          )}
         </div>
       </div>
     </div>

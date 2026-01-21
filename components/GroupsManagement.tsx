@@ -81,7 +81,12 @@ const GroupsManagement: React.FC<GroupsManagementProps> = ({ isAdmin = false, cu
         await db.groups.update(editingId, formData);
         setGroups(prev => prev.map(g => g.id === editingId ? { ...g, ...formData } : g));
       } else {
-        const result = await db.groups.create({ ...formData, balance: 0, participants: [] });
+        const result = await db.groups.create({ 
+          ...formData, 
+          balance: 0, 
+          participants: [],
+          ownerId: currentUser.id 
+        });
         setGroups(prev => [result, ...prev]);
       }
       setIsModalOpen(false);
