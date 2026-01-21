@@ -1,0 +1,5 @@
+{
+  "name": "LottoPool Master - Gestão de Bolões",
+  "description": "Uma plataforma completa para gestão de bolões da Loteria Caixa (Mega-Sena, Lotofácil, Quina e +Milionária), com geração de jogos, controle financeiro, gestão de participantes e integração com Gemini para análises estatísticas.",
+  "requestFramePermissions": []
+}
